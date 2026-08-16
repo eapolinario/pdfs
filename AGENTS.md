@@ -5,13 +5,17 @@ Instructions for agents working in this repository.
 ## What this repo is
 
 A personal collection of publicly accessible PDFs (papers, essays, reports) plus
-an index describing them.
+an index describing them, published as a searchable site at
+<https://eapolinario.github.io/pdfs/>.
 
 ```
 .
 ├── AGENTS.md      # this file
+├── README.md      # human-facing overview
 ├── metadata.md    # the index of every PDF in the collection
-└── files/         # the PDFs themselves
+├── files/         # the PDFs themselves
+├── .site/         # the GitHub Pages site (see "The site" below)
+└── .github/       # the workflow that builds and deploys it
 ```
 
 ## The task: "here is a link to a PDF"
@@ -45,7 +49,14 @@ order, without asking for confirmation:
    `Added` date (newest last, i.e. append). Choose tags per [Tags](#tags),
    reusing existing ones wherever they fit.
 
-5. **Commit** the PDF and the updated `metadata.md` together, e.g.
+5. **Check the site still builds**, which also verifies that `metadata.md` and
+   `files/` agree:
+
+   ```sh
+   python3 .site/build.py --check
+   ```
+
+6. **Commit** the PDF and the updated `metadata.md` together, e.g.
    `Add Naur (1985), Programming as Theory Building`.
 
 ## File naming
@@ -98,11 +109,46 @@ matters more than precision.
 - `programming-languages`
 - `software-engineering`
 
+## The site
+
+<https://eapolinario.github.io/pdfs/> is generated from `metadata.md` — there is
+no separate copy of the index to keep in sync, and no build tooling beyond
+Python 3 and a browser.
+
+| Path | Role |
+| --- | --- |
+| `.site/build.py` | Parses `metadata.md` into `manifest.json` and assembles `_site/` |
+| `.site/index.html`, `style.css`, `app.js` | The page; `app.js` does the searching, with no third-party JavaScript |
+| `.site/test_build.py` | Parser tests, run in CI before every deploy |
+| `.github/workflows/pages.yml` | Builds on every push to `main` and deploys to Pages |
+
+```sh
+python3 .site/test_build.py             # parser tests
+python3 .site/build.py --check          # validate metadata.md against files/
+python3 .site/build.py --assemble _site # full site into _site/ (gitignored)
+python3 -m http.server -d _site 8000
+```
+
+Notes for anyone touching this:
+
+- **`build.py` is a validator too.** It fails on a malformed table, an untagged
+  entry, a title that is not a `[Title](files/x.pdf)` link, or any disagreement
+  between `metadata.md` and `files/`. A broken row breaks the deploy, so run
+  `--check` before committing.
+- **Adding a column** to `metadata.md` means updating `COLUMN_KEYS` and
+  `REQUIRED_KEYS` in `build.py`; unknown columns are rejected on purpose.
+- **The PDFs are served by the site**, copied into the artifact by `build.py`.
+  That is fine at this size, but GitHub Pages caps artifacts at 1 GB — if the
+  collection ever approaches that, link entries to
+  `raw.githubusercontent.com` instead of copying `files/`.
+- **Notes lose their emphasis.** `build.py` strips `*...*` from the `Notes`
+  column so the client can highlight search matches in plain text.
+
 ## Rules
 
 - Only add PDFs the user has provided a link to; the user is responsible for
   confirming they are publicly accessible and redistributable.
 - Never commit paywalled or otherwise restricted material.
 - One PDF per entry, one entry per PDF — `files/` and `metadata.md` must always
-  agree. If you notice drift, fix it.
+  agree. If you notice drift, fix it. `python3 .site/build.py --check` reports it.
 - Do not reformat or rewrite unrelated rows while adding a new one.

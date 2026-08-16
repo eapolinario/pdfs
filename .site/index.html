@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDFs</title>
+<meta name="description" content="A collection of publicly accessible papers, essays and reports.">
+<meta name="color-scheme" content="light dark">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>&#128210;</text></svg>">
+</head>
+<body>
+<header class="masthead">
+  <div class="wrap">
+    <h1>PDFs</h1>
+    <p class="tagline">A small collection of publicly accessible papers, essays and reports.</p>
+    <div class="search">
+      <input id="q" type="search" autocomplete="off" spellcheck="false"
+             placeholder="Search titles, authors, tags, notes&hellip;"
+             aria-label="Search the collection">
+      <kbd class="hint">/</kbd>
+    </div>
+    <p class="syntax">
+      Filter with <code>tag:essay</code>, <code>author:naur</code>, <code>year:1985</code>,
+      or just type words.
+    </p>
+    <div id="tags" class="tags" role="group" aria-label="Filter by tag"></div>
+    <div class="toolbar">
+      <p id="count" class="count" role="status"></p>
+      <label class="sort">Sort
+        <select id="sort">
+          <option value="added-desc">Recently added</option>
+          <option value="year-desc">Year, newest</option>
+          <option value="year-asc">Year, oldest</option>
+          <option value="title-asc">Title, A&ndash;Z</option>
+          <option value="pages-desc">Longest</option>
+          <option value="pages-asc">Shortest</option>
+        </select>
+      </label>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <ol id="results" class="results"></ol>
+  <p id="empty" class="empty" hidden>No matches. <button type="button" id="clear">Clear filters</button></p>
+</main>
+
+<footer class="wrap footer">
+  <p id="summary"></p>
+  <p>
+    Built from <a href="https://github.com/eapolinario/pdfs/blob/main/metadata.md">metadata.md</a>
+    &middot; <a href="https://github.com/eapolinario/pdfs">source on GitHub</a>
+  </p>
+</footer>
+
+<dialog id="preview" class="preview">
+  <div class="preview-bar">
+    <strong id="preview-title"></strong>
+    <span class="preview-actions">
+      <a id="preview-open" href="#" target="_blank" rel="noopener">Open in new tab</a>
+      <button type="button" id="preview-close" aria-label="Close preview">&times;</button>
+    </span>
+  </div>
+  <iframe id="preview-frame" title="PDF preview"></iframe>
+</dialog>
+
+<script src="app.js"></script>
+</body>
+</html>
