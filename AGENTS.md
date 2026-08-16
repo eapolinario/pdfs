@@ -93,6 +93,9 @@ matters more than precision.
 
 - `epistemology`
 - `essay`
+- `formal-methods`
+- `paper`
+- `programming-languages`
 - `software-engineering`
 
 ## Rules
