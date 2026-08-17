@@ -16,6 +16,7 @@ meta-framework.
 | --- | --- |
 | [2.1 Algebraic effects](2.1-algebraic-effects.md) | Effect signatures, handlers, the continuation `κ`, and why §2.1 is setup for a contrast |
 | [2.2 Coeffects](2.2-coeffects.md) | Comonadic and graded coeffects, sensitivity analysis, and the pivot in §2.3 |
+| [5.3 Cordis in practice](5.3-cordis-in-practice.md) | Footnote 4's v3/v4 split, the v4 release timeline, and how `deepseek-ai/deepseek-harness` vendors Cordis |
 
 ## The shape of the argument
 
@@ -34,6 +35,10 @@ from §2.3:
 
 - [ ] §3.1.3 "Independence of Effects" — what exactly is being ruled out? Does
       independence mean commuting effects, or something weaker?
+- [ ] Does the formalism cover an effect registered *during* teardown? The
+      harness had to reject effect creation while a fiber is `UNLOADING` to stop
+      such effects escaping the unload snapshot — see
+      [5.3 Cordis in practice](5.3-cordis-in-practice.md).
 - [ ] The one-sided inverse (§3.1, and p. 74) is supplied by the caller rather
       than derived. What stops a caller from supplying a *wrong* inverse, and
       does the runtime detect it?
