@@ -2,6 +2,8 @@
 #
 # metadata.md is the source of truth: build.py parses it, fails the build if it
 # disagrees with files/, and assembles _site (page + manifest.json + the PDFs).
+# The scripts are PEP 723 uv scripts, so uv resolves the interpreter and there
+# is nothing to pip install.
 # The collection is small enough to serve the PDFs from Pages directly; if it
 # ever approaches the 1 GB artifact limit, link to raw.githubusercontent.com
 # instead of copying files/ into the site.
@@ -14,6 +16,7 @@ on:
   pull_request:
     paths:
       - '.site/**'
+      - '.agents/**'
       - 'metadata.md'
       - 'files/**'
       - '.github/workflows/pages.yml'
@@ -34,11 +37,17 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10
+
       - name: Test the metadata parser
-        run: python3 .site/test_build.py
+        run: uv run .site/test_build.py
+
+      - name: Test the add-paper skill
+        run: uv run .agents/skills/add-paper/test_add_paper.py
 
       - name: Build the site
-        run: python3 .site/build.py --assemble _site --commit "${GITHUB_SHA}"
+        run: uv run .site/build.py --assemble _site --commit "${GITHUB_SHA}"
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5

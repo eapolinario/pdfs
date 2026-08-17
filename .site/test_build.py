@@ -1,5 +1,10 @@
-#!/usr/bin/env python3
-"""Tests for the metadata.md parser. Run: python3 .site/test_build.py"""
+#!/usr/bin/env -S uv run --script
+#
+# /// script
+# requires-python = ">=3.9"
+# dependencies = []
+# ///
+"""Tests for the metadata.md parser. Run: uv run .site/test_build.py"""
 
 import os
 import sys

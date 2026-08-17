@@ -1,11 +1,16 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+#
+# /// script
+# requires-python = ">=3.9"
+# dependencies = []
+# ///
 """Turn metadata.md into manifest.json and assemble the GitHub Pages site.
 
 metadata.md is the single source of truth. This script parses its table,
 validates that it agrees with files/, and emits a JSON manifest that the
 static page loads and searches client-side.
 
-    python3 .site/build.py --assemble _site
+    uv run .site/build.py --assemble _site
 """
 
 from __future__ import annotations

@@ -14,20 +14,36 @@ an index describing them, published as a searchable site at
 ├── README.md      # human-facing overview
 ├── metadata.md    # the index of every PDF in the collection
 ├── files/         # the PDFs themselves
+├── .agents/       # the add-paper skill
 ├── .site/         # the GitHub Pages site (see "The site" below)
 └── .github/       # the workflow that builds and deploys it
 ```
 
+Python here is run with [uv](https://docs.astral.sh/uv/guides/scripts/): every
+script carries a PEP 723 header, so `uv run <script>` resolves the interpreter
+and needs no virtualenv. They are executable too (`./.site/build.py`).
+
 ## The task: "here is a link to a PDF"
 
 Whenever the user gives you a link to a PDF, do **all** of the following, in
-order, without asking for confirmation:
+order, without asking for confirmation. The **`add-paper` skill**
+(`.agents/skills/add-paper/`) automates steps 1–5 — use it:
+
+```sh
+uv run .agents/skills/add-paper/add_paper.py fetch <url>   # download + inspect
+uv run .agents/skills/add-paper/add_paper.py add --file ... --title ...
+```
+
+The steps below are what the skill does, and what to fall back on by hand:
 
 1. **Download it into `files/`.**
 
    ```sh
    curl -sSL -o files/<filename>.pdf <url>
    ```
+
+   Landing pages are not PDFs: a GitHub `/blob/` URL needs
+   `raw.githubusercontent.com`, and an arXiv `/abs/` URL needs `/pdf/`.
 
 2. **Verify it is really a PDF** (`file files/<filename>.pdf` should report
    `PDF document`). If the download produced HTML, an error page, or a 0-byte
@@ -53,7 +69,7 @@ order, without asking for confirmation:
    `files/` agree:
 
    ```sh
-   python3 .site/build.py --check
+   uv run .site/build.py --check
    ```
 
 6. **Commit** the PDF and the updated `metadata.md` together, e.g.
@@ -109,11 +125,35 @@ matters more than precision.
 - `programming-languages`
 - `software-engineering`
 
+## The add-paper skill
+
+`.agents/skills/add-paper/` holds the skill that adds a paper from a link.
+
+| Path | Role |
+| --- | --- |
+| `SKILL.md` | When to use it and the judgement calls it cannot make for you |
+| `add_paper.py` | `fetch` downloads/verifies/reports; `add` installs the PDF and appends the row |
+| `test_add_paper.py` | URL rewriting, filename derivation and cell escaping; run in CI |
+
+The split is deliberate: the script does the mechanical, error-prone half (URL
+rewriting, PDF verification, `pdfinfo`, filename derivation, size formatting,
+`|` escaping, validation) and refuses to guess the half that needs judgement —
+the real title, the year of *original* publication, tags, and notes.
+
+It reuses `.site/build.py` for both `human_size` and the final validation, so
+the `Size` column and the correctness rules cannot drift from what CI enforces.
+That import is in-process on purpose: the check runs *after* `metadata.md` has
+been written, so it must not be able to fail for environmental reasons.
+
+`add_paper.py fetch` suggests a filename only when the author, year and title
+word are all known — a partial guess looks authoritative enough to be accepted
+by mistake.
+
 ## The site
 
 <https://eapolinario.github.io/pdfs/> is generated from `metadata.md` — there is
-no separate copy of the index to keep in sync, and no build tooling beyond
-Python 3 and a browser.
+no separate copy of the index to keep in sync, and no build tooling beyond uv
+and a browser.
 
 | Path | Role |
 | --- | --- |
@@ -123,10 +163,11 @@ Python 3 and a browser.
 | `.github/workflows/pages.yml` | Builds on every push to `main` and deploys to Pages |
 
 ```sh
-python3 .site/test_build.py             # parser tests
-python3 .site/build.py --check          # validate metadata.md against files/
-python3 .site/build.py --assemble _site # full site into _site/ (gitignored)
-python3 -m http.server -d _site 8000
+uv run .site/test_build.py             # parser tests
+uv run .agents/skills/add-paper/test_add_paper.py
+uv run .site/build.py --check          # validate metadata.md against files/
+uv run .site/build.py --assemble _site # full site into _site/ (gitignored)
+uv run -m http.server -d _site 8000
 ```
 
 Notes for anyone touching this:
@@ -150,5 +191,5 @@ Notes for anyone touching this:
   confirming they are publicly accessible and redistributable.
 - Never commit paywalled or otherwise restricted material.
 - One PDF per entry, one entry per PDF — `files/` and `metadata.md` must always
-  agree. If you notice drift, fix it. `python3 .site/build.py --check` reports it.
+  agree. If you notice drift, fix it. `uv run .site/build.py --check` reports it.
 - Do not reformat or rewrite unrelated rows while adding a new one.
