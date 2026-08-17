@@ -5,6 +5,7 @@ A small collection of publicly accessible papers, essays and reports —
 
 - [`metadata.md`](metadata.md) — the index, and the source of truth
 - [`files/`](files/) — the PDFs
+- [`study/`](study/) — reading notes and open questions, one directory per paper
 - [`AGENTS.md`](AGENTS.md) — how entries get added
 
 ## Adding a paper
