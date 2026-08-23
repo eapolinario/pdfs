@@ -122,8 +122,10 @@ matters more than precision.
 - `epistemology`
 - `essay`
 - `formal-methods`
+- `llm`
 - `paper`
 - `programming-languages`
+- `security`
 - `software-engineering`
 
 ## The add-paper skill
