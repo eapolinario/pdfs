@@ -14,6 +14,7 @@ an index describing them, published as a searchable site at
 ├── README.md      # human-facing overview
 ├── metadata.md    # the index of every PDF in the collection
 ├── files/         # the PDFs themselves
+├── study/         # reading notes, one directory per paper (see "Study notes")
 ├── .agents/       # the add-paper skill
 ├── .site/         # the GitHub Pages site (see "The site" below)
 └── .github/       # the workflow that builds and deploys it
@@ -148,6 +149,31 @@ been written, so it must not be able to fail for environmental reasons.
 `add_paper.py fetch` suggests a filename only when the author, year and title
 word are all known — a partial guess looks authoritative enough to be accepted
 by mistake.
+
+## Study notes
+
+`study/` holds reading notes and open questions — working notes meant to make a
+second reading cheaper, not summaries. One directory per paper, **named after
+the PDF stem**, so `files/shi2026programming.pdf` has `study/shi2026programming/`.
+
+```
+study/<pdf-stem>/
+├── README.md             # paper header, index of notes, open questions
+└── <section>-<topic>.md  # one note per section or theme
+```
+
+Note files are named after the section they cover so they sort in reading order
+(`2.1-algebraic-effects.md`). See [`study/README.md`](study/README.md) for the
+conventions; the ones that matter when writing a note:
+
+- **Quote the paper, with a section and page number**, so a claim can be checked
+  without re-reading the PDF.
+- **Keep the paper's words in block quotes** and the note's own worked examples
+  and analogies outside them. Never blur the two.
+- Open questions live in the paper's `README.md` as a checklist.
+
+Notes are not published: `.site/build.py` only reads `metadata.md` and `files/`,
+so adding notes cannot break the site, and a paper needs no notes to be indexed.
 
 ## The site
 
