@@ -119,14 +119,17 @@ matters more than precision.
 
 ### Tags in use
 
+- `compilers`
 - `epistemology`
 - `essay`
 - `formal-methods`
 - `llm`
 - `paper`
+- `parallelism`
 - `programming-languages`
 - `security`
 - `software-engineering`
+- `systems`
 
 ## The add-paper skill
 
