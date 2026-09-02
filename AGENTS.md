@@ -120,6 +120,8 @@ matters more than precision.
 ### Tags in use
 
 - `compilers`
+- `demographics`
+- `economics`
 - `epistemology`
 - `essay`
 - `formal-methods`
