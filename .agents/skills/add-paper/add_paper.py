@@ -6,13 +6,17 @@
 # ///
 """Mechanical half of adding a paper to the collection.
 
-    uv run .agents/skills/add-paper/add_paper.py fetch <url>
+    uv run .agents/skills/add-paper/add_paper.py fetch <url-or-path>
     uv run .agents/skills/add-paper/add_paper.py add --file ... --title ...
 
 `fetch` does the error-prone bookkeeping — normalising the URL, checking the
 bytes really are a PDF, reading pdfinfo, suggesting a filename — and leaves the
 judgement calls (real title, year of *original* publication, tags, notes) to
 whoever runs it. `add` then installs the file and appends the metadata.md row.
+
+`fetch` takes a URL or a PDF already on disk (`~/Downloads/paper.pdf`, or a
+`file://` URL). A local file has no download URL to record, so `add --source`
+still has to be given the public URL the paper can be read at.
 """
 
 from __future__ import annotations
@@ -27,6 +31,7 @@ import sys
 import tempfile
 from datetime import date
 from urllib.parse import urlparse
+from urllib.request import url2pathname
 
 REPO_ROOT = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -81,6 +86,50 @@ def normalise_url(url):
     return url, None
 
 
+LOCAL_PREFIXES = ("/", "~", "./", "../")
+
+
+def resolve_source(argument):
+    """Classify the fetch argument as a local path or a remote URL.
+
+    A PDF already on disk is as valid a starting point as a link — the browser
+    has often already done the fetching (and the cookie-wrangling) that curl
+    cannot. Ambiguity is resolved towards the answer that produces the most
+    useful error: an argument that looks like a path but is not there should say
+    'no such file', not fail somewhere inside curl.
+    """
+    argument = argument.strip()
+    if not argument:
+        raise Failure("no URL or file path given")
+
+    if argument.startswith("file://"):
+        parsed = urlparse(argument)
+        if parsed.netloc and parsed.netloc.lower() != "localhost":
+            raise Failure(f"file:// URL with a remote host is not supported: {argument}")
+        return "path", os.path.abspath(url2pathname(parsed.path))
+
+    if "://" in argument:
+        return "url", argument
+
+    expanded = os.path.abspath(os.path.expanduser(argument))
+    if os.path.exists(expanded) or argument.startswith(LOCAL_PREFIXES):
+        return "path", expanded
+
+    # Scheme-less and not on disk: assume it was meant as a URL and let curl say so.
+    return "url", argument
+
+
+def verify_pdf(path):
+    if not os.path.exists(path) or os.path.getsize(path) == 0:
+        raise Failure(f"empty or missing file: {path}")
+
+    with open(path, "rb") as handle:
+        head = handle.read(5)
+    if head != b"%PDF-":
+        preview = head.decode("latin-1", "replace")
+        raise Failure(f"not a PDF (starts with {preview!r}): {path}")
+
+
 def download(url, dest):
     result = run(["curl", "-sSL", "--fail", "--max-time", "180", "-o", dest, url])
     if result.returncode != 0:
@@ -96,6 +145,16 @@ def download(url, dest):
             f"not a PDF (starts with {preview!r}) — the URL probably serves HTML; "
             "find the direct PDF link"
         )
+
+
+def copy_local(path, dest):
+    if not os.path.exists(path):
+        raise Failure(f"no such file: {path}")
+    if not os.path.isfile(path):
+        raise Failure(f"not a file: {path}")
+    verify_pdf(path)
+    if os.path.abspath(path) != os.path.abspath(dest):
+        shutil.copy2(path, dest)
 
 
 def pdfinfo(path):
@@ -166,12 +225,20 @@ def known_tags():
 
 
 def cmd_fetch(args):
-    url, rewrote = normalise_url(args.url)
-    if rewrote:
-        print(f"note: {rewrote} — downloading {url}", file=sys.stderr)
+    kind, resolved = resolve_source(args.source)
+
+    if kind == "url":
+        origin, rewrote = normalise_url(resolved)
+        if rewrote:
+            print(f"note: {rewrote} — downloading {origin}", file=sys.stderr)
+    else:
+        origin = resolved
 
     staging = args.out or os.path.join(tempfile.gettempdir(), "add-paper.pdf")
-    download(url, staging)
+    if kind == "url":
+        download(origin, staging)
+    else:
+        copy_local(origin, staging)
 
     info = pdfinfo(staging)
     text = first_page_text(staging)
@@ -186,7 +253,9 @@ def cmd_fetch(args):
         collision = f"{suggested} already exists in files/ — check whether it is the same document"
 
     report = {
-        "url": url,
+        "origin": origin,
+        "originKind": kind,
+        "url": origin if kind == "url" else "",
         "staged": staging,
         "suggestedName": suggested,
         "collision": collision,
@@ -208,7 +277,7 @@ def cmd_fetch(args):
         print()
     else:
         print(f"staged      {staging}")
-        print(f"source      {url}")
+        print(f"source      {origin}" + ("   [local file]" if kind == "path" else ""))
         print(f"title       {title or '(none in metadata — read the first page)'}")
         print(f"authors     {authors or '(none in metadata — read the first page)'}")
         print(f"pages       {report['pdfinfo']['pages']}")
@@ -218,6 +287,11 @@ def cmd_fetch(args):
         print(f"filename    {suggested or '(derive it yourself)'}")
         if collision:
             print(f"WARNING     {collision}")
+        if kind == "path":
+            print(
+                "NOTE        a local file has no download URL — pass the public URL "
+                "the paper is readable at as --source"
+            )
         print(f"tags in use {', '.join(report['knownTags'])}")
         print("\n--- first page ---")
         print(text[:1200])
@@ -229,8 +303,10 @@ def escape_cell(text):
 
 
 def cmd_add(args):
-    if not os.path.exists(args.file):
+    source_file = os.path.expanduser(args.file)
+    if not os.path.exists(source_file):
         raise Failure(f"no such file: {args.file}")
+    verify_pdf(source_file)
 
     name = args.name or suggest_name(args.title, args.authors, args.year)
     if not name:
@@ -253,7 +329,7 @@ def cmd_add(args):
     unknown = [tag for tag in tags if tag not in known_tags()]
 
     os.makedirs(FILES_DIR, exist_ok=True)
-    shutil.copy2(args.file, target)
+    shutil.copy2(source_file, target)
 
     info = pdfinfo(target)
     pages = args.pages or int(info.get("Pages", 0) or 0)
@@ -299,19 +375,19 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
 
-    fetch = sub.add_parser("fetch", help="download a PDF and report its metadata")
-    fetch.add_argument("url")
+    fetch = sub.add_parser("fetch", help="stage a PDF from a URL or a local path and report its metadata")
+    fetch.add_argument("source", metavar="url-or-path", help="a URL, or a PDF already on disk")
     fetch.add_argument("--out", help="where to stage the download (default: a temp file)")
     fetch.add_argument("--json", action="store_true", help="machine-readable output")
     fetch.set_defaults(func=cmd_fetch)
 
     add = sub.add_parser("add", help="install a staged PDF and append its metadata.md row")
-    add.add_argument("--file", required=True, help="the staged PDF from `fetch`")
+    add.add_argument("--file", required=True, help="the staged PDF from `fetch`, or any local PDF")
     add.add_argument("--title", required=True)
     add.add_argument("--authors", required=True, help="comma-separated; 'et al.' beyond three")
     add.add_argument("--year", required=True, help="year of ORIGINAL publication")
     add.add_argument("--tags", required=True, help="comma-separated, lowercase kebab-case")
-    add.add_argument("--source", required=True, help="the exact URL downloaded from")
+    add.add_argument("--source", required=True, help="the URL the paper is publicly readable at")
     add.add_argument("--notes", required=True, help="one line: what it is, where published, why it matters")
     add.add_argument("--name", help="override the derived filename")
     add.add_argument("--pages", type=int, help="override the page count")
