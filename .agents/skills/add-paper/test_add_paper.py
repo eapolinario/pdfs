@@ -7,7 +7,9 @@
 """Tests for the add-paper helper. Run: uv run .agents/skills/add-paper/test_add_paper.py"""
 
 import os
+import shutil
 import sys
+import tempfile
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -48,6 +50,95 @@ class NormaliseUrlTest(unittest.TestCase):
     def test_raw_github_url_is_untouched(self):
         url = "https://raw.githubusercontent.com/o/r/main/paper.pdf"
         self.assertEqual(self.rewrite(url), url)
+
+
+class ResolveSourceTest(unittest.TestCase):
+    def test_http_url_is_a_url(self):
+        self.assertEqual(
+            add_paper.resolve_source("https://example.org/paper.pdf"),
+            ("url", "https://example.org/paper.pdf"),
+        )
+
+    def test_file_url_becomes_a_path(self):
+        self.assertEqual(
+            add_paper.resolve_source("file:///tmp/a%20paper.pdf"), ("path", "/tmp/a paper.pdf")
+        )
+
+    def test_file_url_with_localhost_host_becomes_a_path(self):
+        self.assertEqual(
+            add_paper.resolve_source("file://localhost/tmp/paper.pdf"), ("path", "/tmp/paper.pdf")
+        )
+
+    def test_file_url_with_a_remote_host_is_rejected(self):
+        with self.assertRaises(add_paper.Failure):
+            add_paper.resolve_source("file://elsewhere/tmp/paper.pdf")
+
+    def test_absolute_path_is_a_path(self):
+        self.assertEqual(add_paper.resolve_source("/tmp/paper.pdf"), ("path", "/tmp/paper.pdf"))
+
+    def test_tilde_is_expanded(self):
+        self.assertEqual(
+            add_paper.resolve_source("~/Downloads/paper.pdf"),
+            ("path", os.path.expanduser("~/Downloads/paper.pdf")),
+        )
+
+    def test_relative_path_that_exists_is_a_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = os.path.join(tmp, "paper.pdf")
+            open(target, "wb").close()
+            cwd = os.getcwd()
+            os.chdir(tmp)
+            try:
+                self.assertEqual(add_paper.resolve_source("paper.pdf"), ("path", target))
+            finally:
+                os.chdir(cwd)
+
+    # A bare hostname is a typo'd URL far more often than a missing file.
+    def test_scheme_less_url_stays_a_url(self):
+        self.assertEqual(
+            add_paper.resolve_source("arxiv.org/abs/1706.03762"),
+            ("url", "arxiv.org/abs/1706.03762"),
+        )
+
+    def test_empty_argument_is_rejected(self):
+        with self.assertRaises(add_paper.Failure):
+            add_paper.resolve_source("   ")
+
+
+class LocalStagingTest(unittest.TestCase):
+    def stage(self, contents, name="paper.pdf"):
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        source = os.path.join(tmp, name)
+        with open(source, "wb") as handle:
+            handle.write(contents)
+        return source, os.path.join(tmp, "staged.pdf")
+
+    def test_copies_a_real_pdf(self):
+        source, dest = self.stage(b"%PDF-1.4\nbody\n")
+        add_paper.copy_local(source, dest)
+        with open(dest, "rb") as handle:
+            self.assertEqual(handle.read(), b"%PDF-1.4\nbody\n")
+
+    def test_rejects_html_saved_as_pdf(self):
+        source, dest = self.stage(b"<!DOCTYPE html>")
+        with self.assertRaises(add_paper.Failure):
+            add_paper.copy_local(source, dest)
+        self.assertFalse(os.path.exists(dest))
+
+    def test_rejects_an_empty_file(self):
+        source, dest = self.stage(b"")
+        with self.assertRaises(add_paper.Failure):
+            add_paper.copy_local(source, dest)
+
+    def test_rejects_a_missing_file(self):
+        with self.assertRaises(add_paper.Failure):
+            add_paper.copy_local("/nonexistent/paper.pdf", "/tmp/staged.pdf")
+
+    def test_rejects_a_directory(self):
+        source, dest = self.stage(b"%PDF-1.4\n")
+        with self.assertRaises(add_paper.Failure):
+            add_paper.copy_local(os.path.dirname(source), dest)
 
 
 class NamingTest(unittest.TestCase):

@@ -26,25 +26,29 @@ and needs no virtualenv. They are executable too (`./.site/build.py`).
 
 ## The task: "here is a link to a PDF"
 
-Whenever the user gives you a link to a PDF, do **all** of the following, in
-order, without asking for confirmation. The **`add-paper` skill**
+Whenever the user gives you a link to a PDF — or a path to one already on disk,
+e.g. `~/Downloads/paper.pdf` — do **all** of the following, in order, without
+asking for confirmation. The **`add-paper` skill**
 (`.agents/skills/add-paper/`) automates steps 1–5 — use it:
 
 ```sh
-uv run .agents/skills/add-paper/add_paper.py fetch <url>   # download + inspect
+uv run .agents/skills/add-paper/add_paper.py fetch <url-or-path>   # stage + inspect
 uv run .agents/skills/add-paper/add_paper.py add --file ... --title ...
 ```
 
 The steps below are what the skill does, and what to fall back on by hand:
 
-1. **Download it into `files/`.**
+1. **Get it into `files/`.**
 
    ```sh
-   curl -sSL -o files/<filename>.pdf <url>
+   curl -sSL -o files/<filename>.pdf <url>   # from a link
+   cp "<local path>" files/<filename>.pdf    # already downloaded
    ```
 
    Landing pages are not PDFs: a GitHub `/blob/` URL needs
-   `raw.githubusercontent.com`, and an arXiv `/abs/` URL needs `/pdf/`.
+   `raw.githubusercontent.com`, and an arXiv `/abs/` URL needs `/pdf/`. Some
+   publishers (Wiley, Elsevier, IEEE) block curl outright even for open-access
+   articles — those arrive as a local file from the user's browser instead.
 
 2. **Verify it is really a PDF** (`file files/<filename>.pdf` should report
    `PDF document`). If the download produced HTML, an error page, or a 0-byte
@@ -135,18 +139,25 @@ matters more than precision.
 
 ## The add-paper skill
 
-`.agents/skills/add-paper/` holds the skill that adds a paper from a link.
+`.agents/skills/add-paper/` holds the skill that adds a paper from a link or
+from a PDF already on disk.
 
 | Path | Role |
 | --- | --- |
 | `SKILL.md` | When to use it and the judgement calls it cannot make for you |
-| `add_paper.py` | `fetch` downloads/verifies/reports; `add` installs the PDF and appends the row |
-| `test_add_paper.py` | URL rewriting, filename derivation and cell escaping; run in CI |
+| `add_paper.py` | `fetch` stages a URL or local path, verifies and reports; `add` installs the PDF and appends the row |
+| `test_add_paper.py` | Source resolution, URL rewriting, filename derivation and cell escaping; run in CI |
 
 The split is deliberate: the script does the mechanical, error-prone half (URL
 rewriting, PDF verification, `pdfinfo`, filename derivation, size formatting,
 `|` escaping, validation) and refuses to guess the half that needs judgement —
 the real title, the year of *original* publication, tags, and notes.
+
+`fetch` takes a URL or a path because the bytes cannot always be fetched from
+here: CDNs in front of several publishers refuse curl even for open-access
+articles, and the user's browser has already done the work. Only `--source`
+changes — a local file has no download URL, so the canonical article URL has to
+be supplied by hand rather than echoed back from the fetch.
 
 It reuses `.site/build.py` for both `human_size` and the final validation, so
 the `Size` column and the correctness rules cannot drift from what CI enforces.

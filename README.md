@@ -11,12 +11,13 @@ A small collection of publicly accessible papers, essays and reports —
 ## Adding a paper
 
 [`.agents/skills/add-paper/`](.agents/skills/add-paper/) is a skill that takes a
-link and does the rest. `fetch` normalises the URL (GitHub `/blob/` → raw, arXiv
-`/abs/` → `/pdf/`), verifies the bytes really are a PDF, and reports what
-`pdfinfo` and the first page say:
+link — or a PDF already on disk, for the publishers whose CDNs refuse curl — and
+does the rest. `fetch` normalises the URL (GitHub `/blob/` → raw, arXiv `/abs/`
+→ `/pdf/`) or copies the local file, verifies the bytes really are a PDF, and
+reports what `pdfinfo` and the first page say:
 
 ```sh
-uv run .agents/skills/add-paper/add_paper.py fetch <url>
+uv run .agents/skills/add-paper/add_paper.py fetch <url-or-path>
 ```
 
 `add` then installs the PDF under the repo's naming convention, appends the
