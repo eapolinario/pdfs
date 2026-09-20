@@ -129,7 +129,9 @@ matters more than precision.
 - `epistemology`
 - `essay`
 - `formal-methods`
+- `graph-neural-networks`
 - `llm`
+- `machine-learning`
 - `paper`
 - `parallelism`
 - `programming-languages`
