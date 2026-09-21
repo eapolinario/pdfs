@@ -138,6 +138,7 @@ matters more than precision.
 - `security`
 - `software-engineering`
 - `systems`
+- `testing`
 
 ## The add-paper skill
 
