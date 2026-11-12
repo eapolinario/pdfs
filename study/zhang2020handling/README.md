@@ -9,6 +9,23 @@ Yizhou Zhang, Guido Salvaneschi, Andrew C. Myers, 2020. OOPSLA, Article 139,
 
 Page references use PDF page numbers: p. 6 is the printed page 139:6.
 
+This guide uses the discussions as questions to take back to the paper, not as
+substitutes for it. The goal is to trace control transfer, justify which handler
+receives an effect, and state the limits of the safety and performance claims.
+Paper quotations are in block quotes; worksheets and explanations are our own.
+Code sketches in the notes are pseudocode, not checked implementations.
+
+## Reading route and notes
+
+Read in three passes. Familiarity with handlers and delimited continuations
+helps; the first pass includes a small trace to rebuild that intuition.
+
+| Pass | Paper | Note and checkpoint |
+| --- | --- | --- |
+| 1. Follow the control flow | Sections 2-3, pp. 3-13 | [3. Trace the two directions](3-control-flow.md). Explain why the handler resumes with a computation, and follow both returns after a reverse effect. |
+| 2. Protect the abstraction | Section 4, pp. 13-17 | [4. Routing and lifetime safety](4-abstraction-safety.md). Distinguish the wrong handler receiving an effect from the right handler no longer being alive. |
+| 3. Audit the guarantees | Sections 5-7, pp. 17-25; Section 8, p. 26 | [5-7. Proof and implementation boundaries](5-guarantees-and-implementation.md). Relate the rules to the theorems, then assess the callback encoding and the Effekt counterexample without overgeneralizing either. |
+
 ## Collected discussions
 
 Collected on 2026-11-12. These are annotated links, not archived copies of the
@@ -27,7 +44,8 @@ attributes its linked paper to Biernacki et al., but the DOI is this paper's.
 The [Effekt explanation](https://github.com/effekt-lang/effekt/issues/395#issuecomment-1960978500)
 also discusses its authors' different OOPSLA 2020 paper, DOI
 [10.1145/3428194](https://doi.org/10.1145/3428194). Do not merge those two
-papers, or identify this paper's core language Olaf with source Effekt.
+papers, or identify this paper's core language Olaf (Section 5, p. 17) with
+source Effekt.
 
 ## Open questions
 
@@ -35,5 +53,8 @@ papers, or identify this paper's core language Olaf with source Effekt.
       language. Which guarantees require explicit conventions or extra types?
 - [ ] Can the escape from effekt-lang/effekt#1176 be expressed in Olaf, or does
       it rely on constructs or typing rules outside the modeled language?
+- [ ] Determine the limits of the impure-parameter encoding discussed in
+      effekt-lang/effekt#395. Do not infer equivalence with every notion of
+      higher-order or scoped effects from similar-looking signatures.
 - [ ] Work out the Lisp-condition-system connection suggested by the Lobsters
       submission: distinguish signaling, selecting a restart, and resuming.
