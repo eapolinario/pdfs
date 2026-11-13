@@ -26,6 +26,9 @@ helps; the first pass includes a small trace to rebuild that intuition.
 | 2. Protect the abstraction | Section 4, pp. 13-17 | [4. Routing and lifetime safety](4-abstraction-safety.md). Distinguish the wrong handler receiving an effect from the right handler no longer being alive. |
 | 3. Audit the guarantees | Sections 5-7, pp. 17-25; Section 8, p. 26 | [5-7. Proof and implementation boundaries](5-guarantees-and-implementation.md). Relate the rules to the theorems, then assess the callback encoding and the Effekt counterexample without overgeneralizing either. |
 
+Review with [24 flashcards](flashcards.md), following the same three passes.
+Answers are hidden until opened and include paper or discussion references.
+
 ## Collected discussions
 
 Collected on 2026-11-12. These are annotated links, not archived copies of the
