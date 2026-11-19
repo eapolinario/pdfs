@@ -130,6 +130,7 @@ matters more than precision.
 - `essay`
 - `formal-methods`
 - `graph-neural-networks`
+- `incident-report`
 - `llm`
 - `machine-learning`
 - `paper`
