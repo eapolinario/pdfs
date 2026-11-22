@@ -124,6 +124,7 @@ matters more than precision.
 ### Tags in use
 
 - `compilers`
+- `control-systems`
 - `demographics`
 - `economics`
 - `epistemology`
